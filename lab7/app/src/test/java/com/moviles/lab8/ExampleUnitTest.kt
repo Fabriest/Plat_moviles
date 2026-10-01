@@ -1,4 +1,4 @@
-package com.moviles.lab7
+package com.moviles.lab8
 
 import org.junit.Test
 

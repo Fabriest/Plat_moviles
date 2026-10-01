@@ -1,4 +1,4 @@
-package com.moviles.lab7
+package com.moviles.lab8
 
 class CharacterDb {
     private val characters: List<Character> = listOf(

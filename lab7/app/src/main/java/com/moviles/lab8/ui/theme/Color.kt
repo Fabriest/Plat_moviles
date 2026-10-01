@@ -1,4 +1,4 @@
-package com.moviles.lab7.ui.theme
+package com.moviles.lab8.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

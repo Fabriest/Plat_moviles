@@ -1,4 +1,4 @@
-package com.moviles.lab7
+package com.moviles.lab8
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
