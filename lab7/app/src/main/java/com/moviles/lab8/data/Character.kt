@@ -1,5 +1,7 @@
-package com.moviles.lab8
+package com.moviles.lab8.data
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class Character(
     val id: Int,
     val name: String,

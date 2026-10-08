@@ -1,5 +1,5 @@
-package com.moviles.lab8
-// import .....Location
+package com.moviles.lab8.data
+
 
 class LocationDb {
     private val locations: List<Location> = listOf(
