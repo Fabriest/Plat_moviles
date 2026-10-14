@@ -4,17 +4,24 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.moviles.lab8.viewmodels.AuthViewModel
 
 @Composable
-fun LoginScreen(onLoginClick: () -> Unit) {
+fun LoginScreen(
+    viewModel: AuthViewModel = viewModel(),
+    onLoginSuccess: () -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -24,14 +31,32 @@ fun LoginScreen(onLoginClick: () -> Unit) {
 
         AsyncImage(
             model = "https://upload.wikimedia.org/wikipedia/commons/b/b1/Rick_and_Morty.svg",
-            contentDescription = "Logo Rick and Morty",
+            contentDescription = null,
             modifier = Modifier.fillMaxWidth().height(120.dp)
         )
 
         Spacer(modifier = Modifier.height(48.dp))
 
-        Button(onClick = onLoginClick, modifier = Modifier.fillMaxWidth(0.6f)) {
-            Text("Entrar")
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text("Nombre") },
+            modifier = Modifier.fillMaxWidth(0.8f)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = {
+                if (name.isNotBlank()) {
+                    viewModel.login(name) {
+                        onLoginSuccess()
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth(0.6f)
+        ) {
+            Text("Iniciar sesión")
         }
 
         Spacer(modifier = Modifier.weight(1f))
@@ -41,7 +66,12 @@ fun LoginScreen(onLoginClick: () -> Unit) {
 }
 
 @Composable
-fun ProfileScreen(onLogoutClick: () -> Unit) {
+fun ProfileScreen(
+    viewModel: AuthViewModel = viewModel(),
+    onLogoutClick: () -> Unit
+) {
+    val userName by viewModel.userName.collectAsState()
+
     Column(
         modifier = Modifier.fillMaxSize().padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -49,19 +79,23 @@ fun ProfileScreen(onLogoutClick: () -> Unit) {
     ) {
         Icon(
             imageVector = Icons.Default.Person,
-            contentDescription = "Foto de perfil",
+            contentDescription = null,
             modifier = Modifier.size(120.dp),
             tint = MaterialTheme.colorScheme.primary
         )
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text(text = "Fabricio Estrada", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text(text = userName ?: "", fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Text(text = "Carné: 25230", fontSize = 18.sp, color = Color.Gray)
 
         Spacer(modifier = Modifier.height(48.dp))
 
         Button(
-            onClick = onLogoutClick,
+            onClick = {
+                viewModel.logout {
+                    onLogoutClick()
+                }
+            },
             modifier = Modifier.fillMaxWidth(0.7f),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
         ) {
