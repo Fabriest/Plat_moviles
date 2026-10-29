@@ -6,7 +6,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -32,24 +34,46 @@ fun CharactersScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
+    if (state.isLoading) {
+        LoadingLayout(onClick = { viewModel.triggerError() })
+        return
+    }
+
+    if (state.hasError) {
+        ErrorLayout(onRetry = { viewModel.fetchCharacters() })
+        return
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Characters", color = Color.White) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primary)
+                title = { Text("Characters") },
+                actions = {
+                    IconButton(onClick = { viewModel.toggleFilter() }) {
+                        Icon(
+                            imageVector = if (state.filterFavorites) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = "Filtrar favoritos",
+                            tint = if (state.filterFavorites) Color.Red else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
             )
         }
     ) { paddingValues ->
-        Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
-            if (state.isLoading) {
-                LoadingLayout(onClick = { viewModel.triggerError() })
-            } else if (state.hasError) {
-                ErrorLayout(onRetry = { viewModel.fetchCharacters() })
-            } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(state.data) { character ->
-                        CharacterListItem(character = character, onClick = { onCharacterClick(character.id) })
-                    }
+        val displayedList = if (state.filterFavorites) state.data.filter { it.isFavorite } else state.data
+
+        if (displayedList.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                Text("No hay elementos a mostrar", fontSize = 18.sp, color = Color.Gray)
+            }
+        } else {
+            LazyColumn(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+                items(displayedList) { character ->
+                    CharacterItem(
+                        character = character,
+                        onClick = { onCharacterClick(character.id) },
+                        onFavoriteClick = { viewModel.toggleFavorite(character.id, character.isFavorite) }
+                    )
                 }
             }
         }
@@ -57,12 +81,9 @@ fun CharactersScreen(
 }
 
 @Composable
-fun CharacterListItem(character: Character, onClick: () -> Unit) {
+fun CharacterItem(character: Character, onClick: () -> Unit, onFavoriteClick: () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(16.dp),
+        modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
@@ -71,9 +92,16 @@ fun CharacterListItem(character: Character, onClick: () -> Unit) {
             modifier = Modifier.size(64.dp).clip(CircleShape)
         )
         Spacer(modifier = Modifier.width(16.dp))
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(text = character.name, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             Text(text = "${character.species} - ${character.status}", color = Color.Gray)
+        }
+        IconButton(onClick = onFavoriteClick) {
+            Icon(
+                imageVector = if (character.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                contentDescription = "Favorite",
+                tint = if (character.isFavorite) Color.Red else Color.Gray
+            )
         }
     }
 }
@@ -85,46 +113,55 @@ fun CharacterDetailScreen(
     onBackClick: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    val character = state.data
+
+    if (state.isLoading) {
+        LoadingLayout(onClick = { viewModel.triggerError() })
+        return
+    }
+
+    if (state.hasError || character == null) {
+        ErrorLayout(onRetry = { viewModel.fetchCharacterDetail() })
+        return
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Characters details", color = Color.White) },
+                title = { Text("Character details") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Regresar", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primary)
+                actions = {
+                    IconButton(onClick = { viewModel.toggleFavorite(character.isFavorite) }) {
+                        Icon(
+                            imageVector = if (character.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = "Favorite",
+                            tint = if (character.isFavorite) Color.Red else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
             )
         }
     ) { paddingValues ->
-        Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
-            if (state.isLoading) {
-                LoadingLayout(onClick = { viewModel.triggerError() })
-            } else if (state.hasError) {
-                ErrorLayout(onRetry = { viewModel.fetchCharacterDetail() })
-            } else {
-                state.data?.let { character ->
-                    Column(
-                        modifier = Modifier.fillMaxSize().padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        AsyncImage(
-                            model = character.image,
-                            contentDescription = character.name,
-                            modifier = Modifier.size(200.dp).clip(CircleShape)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(text = character.name, fontWeight = FontWeight.Bold, fontSize = 24.sp)
-                        Spacer(modifier = Modifier.height(48.dp))
+        Column(
+            modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            AsyncImage(
+                model = character.image,
+                contentDescription = character.name,
+                modifier = Modifier.size(200.dp).clip(CircleShape)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(text = character.name, fontWeight = FontWeight.Bold, fontSize = 28.sp)
+            Spacer(modifier = Modifier.height(32.dp))
 
-                        DetailRow(label = "Species:", value = character.species)
-                        DetailRow(label = "Status:", value = character.status)
-                        DetailRow(label = "Gender:", value = character.gender)
-                    }
-                }
-            }
+            DetailRow(label = "Species:", value = character.species)
+            DetailRow(label = "Status:", value = character.status)
+            DetailRow(label = "Gender:", value = character.gender)
         }
     }
 }
@@ -135,7 +172,7 @@ fun DetailRow(label: String, value: String) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(text = label, color = Color.Gray, fontSize = 16.sp)
-        Text(text = value, fontSize = 16.sp)
+        Text(text = label, fontSize = 18.sp, color = Color.Gray)
+        Text(text = value, fontSize = 18.sp, fontWeight = FontWeight.Medium)
     }
 }

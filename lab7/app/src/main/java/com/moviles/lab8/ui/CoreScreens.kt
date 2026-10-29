@@ -21,6 +21,7 @@ fun LoginScreen(
     onLoginSuccess: () -> Unit
 ) {
     var name by remember { mutableStateOf("") }
+    val isLoading by viewModel.isLoading.collectAsState()
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -41,7 +42,8 @@ fun LoginScreen(
             value = name,
             onValueChange = { name = it },
             label = { Text("Nombre") },
-            modifier = Modifier.fillMaxWidth(0.8f)
+            modifier = Modifier.fillMaxWidth(0.8f),
+            enabled = !isLoading
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -54,9 +56,18 @@ fun LoginScreen(
                     }
                 }
             },
-            modifier = Modifier.fillMaxWidth(0.6f)
+            modifier = Modifier.fillMaxWidth(0.6f),
+            enabled = name.isNotBlank() && !isLoading
         ) {
-            Text("Iniciar sesión")
+            if (isLoading) {
+
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            } else {
+                Text("Iniciar sesión")
+            }
         }
 
         Spacer(modifier = Modifier.weight(1f))

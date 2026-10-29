@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.moviles.lab8.data.Location
 import com.moviles.lab8.viewmodels.LocationDetailViewModel
 import com.moviles.lab8.viewmodels.LocationsViewModel
 
@@ -28,35 +29,47 @@ fun LocationsScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
+    if (state.isLoading) {
+        LoadingLayout(onClick = { viewModel.triggerError() })
+        return
+    }
+
+    if (state.hasError) {
+        ErrorLayout(onRetry = { viewModel.fetchLocations() })
+        return
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Locations", color = Color.White) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primary)
-            )
+            TopAppBar(title = { Text("Locations") })
         }
     ) { paddingValues ->
-        Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
-            if (state.isLoading) {
-                LoadingLayout(onClick = { viewModel.triggerError() })
-            } else if (state.hasError) {
-                ErrorLayout(onRetry = { viewModel.fetchLocations() })
-            } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(state.data) { location ->
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onLocationClick(location.id) }
-                                .padding(16.dp)
-                        ) {
-                            Text(text = location.name, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                            Text(text = location.type, color = Color.Gray)
-                        }
-                        HorizontalDivider(color = Color.LightGray, thickness = 1.dp)
-                    }
+        if (state.data.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                Text("No hay locaciones disponibles", fontSize = 18.sp, color = Color.Gray)
+            }
+        } else {
+            LazyColumn(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+                items(state.data) { location ->
+                    LocationItem(
+                        location = location,
+                        onClick = { onLocationClick(location.id) }
+                    )
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun LocationItem(location: Location, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = location.name, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text(text = location.type, color = Color.Gray)
         }
     }
 }
@@ -68,40 +81,40 @@ fun LocationDetailScreen(
     onBackClick: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    val location = state.data
+
+    if (state.isLoading) {
+        LoadingLayout(onClick = { viewModel.triggerError() })
+        return
+    }
+
+    if (state.hasError || location == null) {
+        ErrorLayout(onRetry = { viewModel.fetchLocationDetail() })
+        return
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Location details", color = Color.White) },
+                title = { Text("Location details") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Regresar", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primary)
+                }
             )
         }
     ) { paddingValues ->
-        Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
-            if (state.isLoading) {
-                LoadingLayout(onClick = { viewModel.triggerError() })
-            } else if (state.hasError) {
-                ErrorLayout(onRetry = { viewModel.fetchLocationDetail() })
-            } else {
-                state.data?.let { location ->
-                    Column(
-                        modifier = Modifier.fillMaxSize().padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(text = location.name, fontWeight = FontWeight.Bold, fontSize = 28.sp)
-                        Spacer(modifier = Modifier.height(32.dp))
+        Column(
+            modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(text = location.name, fontWeight = FontWeight.Bold, fontSize = 28.sp)
+            Spacer(modifier = Modifier.height(32.dp))
 
-                        DetailRow(label = "ID:", value = location.id.toString())
-                        DetailRow(label = "Type:", value = location.type)
-                        DetailRow(label = "Dimension:", value = location.dimension)
-                    }
-                }
-            }
+            DetailRow(label = "Type:", value = location.type)
+            DetailRow(label = "Dimension:", value = location.dimension)
         }
     }
 }
